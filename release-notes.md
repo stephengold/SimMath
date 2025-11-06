@@ -8,6 +8,7 @@ Version 1.6.1 (unreleased)
     match other classes.
 * Added Vec3d.round()
 * Added Vec3d.distance(Vec3i)
+* Added Quatd.dot(), fromRotationMatrix(), and fromAxes() methods.
 
 
 Version 1.6.0 (latest)

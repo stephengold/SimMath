@@ -454,10 +454,10 @@ public final class Quatd implements Cloneable, java.io.Serializable {
         double wr = -x * qx - y * qy - z * qz + w * qw;
 
         if( result == null ) {
-            result = new Quatd(xr, yr, zr, wr); 
+            result = new Quatd(xr, yr, zr, wr);
         } else {
             result.set(xr, yr, zr, wr);
-        } 
+        }
         return result;
     }
 
@@ -737,7 +737,7 @@ public final class Quatd implements Cloneable, java.io.Serializable {
     /**
      *  Sets this Quatd's value to the linear interpolation of start
      *  and end using the mix value as the amount to interpolate.
-     * 
+     *
      * @param start the desired value when {@code mix} is zero (not null,
      * unaffected unless it's {@code this})
      * @param end the desired value when {@code mix} is one (not null,
@@ -801,6 +801,131 @@ public final class Quatd implements Cloneable, java.io.Serializable {
         this.w = (scale1 * start.w) + (scale2 * endw);
 
         return this;
+    }
+
+    /**
+     * <code>dot</code> calculates and returns the dot product of this
+     * quaternion with that of the parameter quaternion.
+     *
+     * @param q   the quaternion to calculate the dot product of.
+     * @return the dot product of this and the parameter quaternion.
+     */
+    public double dot(Quatd q) {
+        return w * q.w + x * q.x + y * q.y + z * q.z;
+    }
+
+    /**
+     * <code>fromRotationMatrix</code> generates a quaternion from a supplied
+     * matrix. This matrix is assumed to be a rotational matrix.
+     *
+     * @param matrix
+     *            the matrix that defines the rotation.
+     * @return this
+     */
+    public Quatd fromRotationMatrix(Matrix3d matrix) {
+        return fromRotationMatrix(matrix.m00, matrix.m01, matrix.m02, matrix.m10,
+                matrix.m11, matrix.m12, matrix.m20, matrix.m21, matrix.m22);
+    }
+
+    /**
+     * Set this quaternion based on a rotation matrix with the specified
+     * elements.
+     *
+     * @param m00 the matrix element in row 0, column 0
+     * @param m01 the matrix element in row 0, column 1
+     * @param m02 the matrix element in row 0, column 2
+     * @param m10 the matrix element in row 1, column 0
+     * @param m11 the matrix element in row 1, column 1
+     * @param m12 the matrix element in row 1, column 2
+     * @param m20 the matrix element in row 2, column 0
+     * @param m21 the matrix element in row 2, column 1
+     * @param m22 the matrix element in row 2, column 2
+     * @return this Quatd
+     */
+    public Quatd fromRotationMatrix(double m00, double m01, double m02,
+            double m10, double m11, double m12, double m20, double m21, double m22) {
+        // first normalize the forward (F), up (U) and side (S) vectors of the rotation matrix
+        // so that the scale does not affect the rotation
+        double lengthSquared = m00 * m00 + m10 * m10 + m20 * m20;
+        if (lengthSquared != 1f && lengthSquared != 0f) {
+            lengthSquared = 1.0f / Math.sqrt(lengthSquared);
+            m00 *= lengthSquared;
+            m10 *= lengthSquared;
+            m20 *= lengthSquared;
+        }
+        lengthSquared = m01 * m01 + m11 * m11 + m21 * m21;
+        if (lengthSquared != 1f && lengthSquared != 0f) {
+            lengthSquared = 1.0f / Math.sqrt(lengthSquared);
+            m01 *= lengthSquared;
+            m11 *= lengthSquared;
+            m21 *= lengthSquared;
+        }
+        lengthSquared = m02 * m02 + m12 * m12 + m22 * m22;
+        if (lengthSquared != 1f && lengthSquared != 0f) {
+            lengthSquared = 1.0f / Math.sqrt(lengthSquared);
+            m02 *= lengthSquared;
+            m12 *= lengthSquared;
+            m22 *= lengthSquared;
+        }
+
+        // Use the Graphics Gems code, from
+        // ftp://ftp.cis.upenn.edu/pub/graphics/shoemake/quatut.ps.Z
+        // *NOT* the "Matrix and Quaternions FAQ", which has errors!
+
+        // the trace is the sum of the diagonal elements; see
+        // http://mathworld.wolfram.com/MatrixTrace.html
+        double t = m00 + m11 + m22;
+
+        // we protect the division by s by ensuring that s>=1
+        if (t >= 0) { // |w| >= .5
+            double s = Math.sqrt(t + 1); // |s|>=1 ...
+            w = 0.5f * s;
+            s = 0.5f / s;                 // so this division isn't bad
+            x = (m21 - m12) * s;
+            y = (m02 - m20) * s;
+            z = (m10 - m01) * s;
+        } else if ((m00 > m11) && (m00 > m22)) {
+            double s = Math.sqrt(1.0f + m00 - m11 - m22); // |s|>=1
+            x = s * 0.5f; // |x| >= .5
+            s = 0.5f / s;
+            y = (m10 + m01) * s;
+            z = (m02 + m20) * s;
+            w = (m21 - m12) * s;
+        } else if (m11 > m22) {
+            double s = Math.sqrt(1.0f + m11 - m00 - m22); // |s|>=1
+            y = s * 0.5f; // |y| >= .5
+            s = 0.5f / s;
+            x = (m10 + m01) * s;
+            z = (m21 + m12) * s;
+            w = (m02 - m20) * s;
+        } else {
+            double s = Math.sqrt(1.0f + m22 - m00 - m11); // |s|>=1
+            z = s * 0.5f; // |z| >= .5
+            s = 0.5f / s;
+            x = (m02 + m20) * s;
+            y = (m21 + m12) * s;
+            w = (m10 - m01) * s;
+        }
+
+        return this;
+    }
+
+    /**
+     *
+     * <code>fromAxes</code> creates a <code>Quatd</code> that
+     * represents the coordinate system defined by three axes. These axes are
+     * assumed to be orthogonal and no error checking is applied. Thus, the user
+     * must ensure that the three axes being provided represent a proper
+     * right-handed coordinate system.
+     *
+     * @param xAxis vector representing the x-axis of the coordinate system.
+     * @param yAxis vector representing the y-axis of the coordinate system.
+     * @param zAxis vector representing the z-axis of the coordinate system.
+     * @return this
+     */
+    public Quatd fromAxes(Vec3d xAxis, Vec3d yAxis, Vec3d zAxis) {
+        return fromRotationMatrix(xAxis.x, yAxis.x, zAxis.x, xAxis.y, yAxis.y,
+                zAxis.y, xAxis.z, yAxis.z, zAxis.z);
     }
 
     /**
