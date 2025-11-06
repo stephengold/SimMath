@@ -9,6 +9,9 @@ Version 1.6.1 (unreleased)
 * Added Vec3d.round()
 * Added Vec3d.distance(Vec3i)
 * Added Quatd.dot(), fromRotationMatrix(), and fromAxes() methods.
+* Modified PositionTransition3d constructor to fail for null end positions
+    to present the error earlier. (possibly breaking change if code was already
+    working around the later bug caused by null end positions.)
 
 
 Version 1.6.0 (latest)
